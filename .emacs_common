@@ -1,0 +1,435 @@
+;; .emacs
+
+(if (file-exists-p ".windows-font.emacs")
+    (load-file ".windows-font.emacs"))
+
+;;; uncomment this line to disable loading of "default.el" at startup
+;; (setq inhibit-default-init t)
+
+;; turn on font-lock mode
+(when (fboundp 'global-font-lock-mode)
+  (global-font-lock-mode t))
+
+;;;###autoload
+(defun host-nickname ()
+  "Return the short version of the system hostname.
+Return a string which is the name of the current host up to any \".\"
+or \"-\" character.  Thus if the hostname is \"apple-gunkies.ai.mit.edu\"
+then the return string will just be \"apple\"."
+  (let ((hostname (system-name)))
+    (save-match-data
+      (if (string-match "^[^.-]+" hostname)
+          (substring hostname 0 (match-end 0))
+        hostname))))
+
+;; enable visual feedback on selections
+;(setq transient-mark-mode t)
+
+;; default to better frame titles
+(setq frame-title-format
+      (concat  invocation-name "@" (host-nickname) " %b %+%+ %f"))
+
+;; dont want too many messages
+(setq message-log-max 1024)
+
+;; C-k kills whole line and newline if at beginning of line
+(setq kill-whole-line t)
+
+(setq completion-auto-exit t)
+
+;; (load "~/.emacs.d/haskell-mode/haskell-site-file")
+;; (add-hook 'haskell-mode-hook 'turn-on-haskell-doc-mode)
+;; (add-hook 'haskell-mode-hook 'turn-on-haskell-indent)
+;; (setq haskell-font-lock-symbols t)
+;; ;;(add-hook 'haskell-mode-hook 'turn-on-haskell-simple-indent)
+
+
+(add-hook 'shell-mode-hook
+	  '(lambda ()
+             (local-set-key [home]        ; move to beginning of line, after prompt
+                            'comint-bol)
+	     (local-set-key [up]          ; cycle backward through command history
+                            '(lambda () (interactive)
+                               (if (comint-after-pmark-p)
+                                   (comint-previous-input 1)
+                                 (previous-line 1))))
+	     (local-set-key [down]        ; cycle forward through command history
+                            '(lambda () (interactive)
+                               (if (comint-after-pmark-p)
+                                   (comint-next-input 1)
+                                 (forward-line 1))))
+             ))
+
+(add-hook 'gud-mode-hook
+	  '(lambda ()
+             (local-set-key [home]        ; move to beginning of line, after prompt
+                            'comint-bol)
+	     (local-set-key [up]          ; cycle backward through command history
+                            '(lambda () (interactive)
+                               (if (comint-after-pmark-p)
+                                   (comint-previous-input 1)
+                                 (previous-line 1))))
+	     (local-set-key [down]        ; cycle forward through command history
+                            '(lambda () (interactive)
+                               (if (comint-after-pmark-p)
+                                   (comint-next-input 1)
+                                 (forward-line 1))))
+             ))
+
+(add-hook 'c-mode-common-hook
+          (lambda ()
+            (turn-on-auto-fill)
+            (setq fill-column 80)
+            (setq comment-column 60)
+            (modify-syntax-entry ?_ "w")       ; now '_' is not considered a word-delimiter
+            ;(c-set-style "whitesmith")         ; set indentation style
+            ;(local-set-key [(control tab)]     ; move to next tempo mark
+            ;               'tempo-forward-mark)
+            (local-set-key "\M-u"              ; capitalize current word (c constants)
+                           '(lambda () (interactive) (backward-word 1) (upcase-word 1)))
+            ))
+
+(defun smart-tab ()
+  "This smart tab is minibuffer compliant: it acts as usual in
+    the minibuffer. Else, if mark is active, indents region. Else if
+    point is at the end of a symbol, expands it. Else indents the
+    current line."
+  (interactive)
+  (if (minibufferp)
+      (unless (minibuffer-complete)
+        (dabbrev-expand nil))
+    (if mark-active
+        (indent-region (region-beginning)
+                       (region-end))
+      (if (looking-at "\\_>")
+          (dabbrev-expand nil)
+        (indent-for-tab-command)))))
+
+;; Load CEDET
+;; (require 'cedet)
+;; (require 'ede)
+;; (global-ede-mode t)                      ; Enable the Project management system
+;; (semantic-load-enable-excessive-code-helpers); enable everything in here
+;; (global-srecode-minor-mode 1)            ; Enable template insertion menu
+;; ;; enable ctags for some languages:
+;; ;;(semantic-load-enable-primary-exuberent-ctags-support) ; wrong def
+
+;; (require 'semantic-ia)
+;; (require 'semantic-gcc)
+
+;; (defun my-cedet-hook ()
+;;   (local-set-key [(control return)] 'semantic-ia-complete-symbol)
+;;   (local-set-key "\C-c?" 'semantic-ia-complete-symbol-menu)
+;;   (local-set-key "\C-c>" 'semantic-complete-analyze-inline)
+;;   (local-set-key "\C-cp" 'semantic-analyze-proto-impl-toggle)
+;;   (local-set-key "." 'semantic-complete-self-insert)
+;;   (local-set-key ">" 'semantic-complete-self-insert))
+
+;; (add-hook 'c-mode-common-hook 'my-cedet-hook)
+
+(defun insert-date (prefix)
+  "Insert the current date. With prefix-argument, use ISO format. With
+   two prefix arguments, write out the day and month name."
+  (interactive "P")
+  (let ((format (cond
+                 ((not prefix) "%Y-%m-%d")
+                 ((equal prefix '(4)) "%m.%d.%Y")
+                 ((equal prefix '(16)) "%d. %B %Y")))
+        (system-time-locale "en_US"))
+    (insert (format-time-string format))))
+
+(global-set-key "\C-xg" 'goto-line)
+(global-set-key "\C-w" 'backward-kill-word)
+(global-set-key "\C-x\C-k" 'kill-region)
+(global-set-key (kbd "C-c d") 'insert-date)
+(global-set-key (kbd "C-c k") 'bury-buffer)
+(global-set-key (kbd "C-c m") 'transient-mark-mode)
+(global-set-key (kbd "M-C-f") 'find-file-at-point)
+(global-set-key (kbd "C-c c") 'compile)
+(global-set-key (kbd "C-c h") 'switch-to-haskell)
+(global-set-key (kbd "M-<left>") 'previous-buffer)
+(global-set-key (kbd "M-<right>") 'next-buffer)
+(global-set-key (kbd "RET") 'newline-and-indent)
+
+(global-set-key (kbd "C-c e") '(lambda () (interactive)(insert "https://svn-external.coherentlogix.com/svn/Software/clxcc/")))
+(global-set-key (kbd "C-c s") '(lambda () (interactive)(insert "source $HX_HOME/bin/hxsetup.sh")))
+
+(setq-default indent-tabs-mode nil)
+(setq-default comint-input-ring-size 10000)
+;(setq default-major-mode 'text-mode)
+(setq default-major-mode 'fundamental-mode)
+(setq-default fill-column 78)
+(setq make-backup-files nil)
+;;(setq show-paren-mode t)
+
+;;; Use "%" to jump to the matching parenthesis.
+(defun goto-match-paren (arg)
+  "Go to the matching parenthesis if on parenthesis, otherwise insert
+the character typed."
+  (interactive "p")
+  (cond ((looking-at "\\s\(") (forward-list 1) (backward-char 1))
+    ((looking-at "\\s\)") (forward-char 1) (backward-list 1))
+    (t                    (self-insert-command (or arg 1))) ))
+(global-set-key "%" `goto-match-paren)
+
+(setq inhibit-startup-message   t)
+
+(setq comint-buffer-maximum-size 10240)
+(add-hook 'comint-output-filter-functions 'comint-truncate-buffer)
+
+;; (require 'ecb)
+
+;;(load "~chobe/bin/share/emacs/site-lisp/auctex.el" nil t t)
+;;(load "~chobe/bin/share/emacs/site-lisp/preview-latex.el" nil t t)
+
+(custom-set-variables
+  ;; custom-set-variables was added by Custom.
+  ;; If you edit it by hand, you could mess it up, so be careful.
+  ;; Your init file should contain only one such instance.
+  ;; If there is more than one, they won't work right.
+ '(comint-completion-addsuffix t)
+ '(comint-completion-autolist nil)
+ '(comint-input-ignoredups t)
+ '(comint-input-ring-file-name "~/.emacs_comint_history")
+ '(comint-move-point-for-output t)
+ '(comint-scroll-show-maximum-output t)
+ '(comint-scroll-to-bottom-on-input t)
+ '(compilation-scroll-output t)
+ '(ecb-options-version "2.40")
+ '(ediff-split-window-function (quote split-window-horizontally))
+ '(erc-minibuffer-notice t)
+ '(erc-modules (quote (autojoin button completion dcc fill irccontrols list log match menu move-to-prompt netsplit )))
+ '(erc-stamp-mode t)
+ '(global-semantic-decoration-mode t nil (semantic/decorate/mode))
+ '(global-semantic-highlight-edits-mode t nil (semantic/util-modes))
+ '(gud-tooltip-mode t)
+ '(lazy-highlight-cleanup nil)
+ '(ldap-host-parameters-alist (quote (("") ("cyclone.coherentlogix.com" base "DN" binddn "ou=People,dc=coherentlogix,dc=com"))))
+ '(save-place t nil (saveplace))
+ '(scroll-bar-mode nil)
+ '(semantic-decoration-mode-hook nil)
+ '(semantic-default-submodes (quote (global-semantic-highlight-func-mode global-semantic-decoration-mode global-semantic-idle-completions-mode global-semantic-idle-scheduler-mode global-semanticdb-minor-mode global-semantic-idle-summary-mode global-semantic-mru-bookmark-mode)))
+ '(semantic-mode t)
+ '(show-paren-mode t)
+ '(tab-always-indent (quote complete))
+ '(text-mode-hook (quote (turn-on-auto-fill text-mode-hook-identify)))
+ '(tool-bar-mode nil)
+ '(transient-mark-mode t)
+ '(uniquify-buffer-name-style (quote forward) nil (uniquify))
+ '(vm-imap-expunge-after-retrieving nil))
+(file-cache-add-directory "~/clxcc/compiler-source/be/cg/")
+(file-cache-add-directory "~/clxcc/compiler-source/be/lno/")
+(file-cache-add-directory "~/clxcc/compiler-source/be/cg/hyperx64")
+
+(add-to-list 'load-path
+             "/home/chobe/.emacs.d")
+
+;;recentf
+(require 'recentf)
+(recentf-mode 1)
+(setq recentf-max-saved-items 500)
+(setq recentf-max-menu-items 60)
+(global-set-key (kbd "C-c r") 'recentf-open-files)
+
+(ido-mode 'buffer)
+(setq ido-enable-flex-matching t)
+
+(setq dired-recursive-copies 'always)
+(setq dired-recursive-deletes 'top)
+
+; interpret and use ansi color codes in shell output windows
+(ansi-color-for-comint-mode-on)
+
+;;; LDAP stuff
+
+(require 'ldap)
+(require 'eudc)
+
+(setq eudc-default-return-attributes nil
+      eudc-strict-return-matches nil)
+
+(setq ldap-ldapsearch-args (quote ("-tt" "-LLL" "-x")))
+(setq eudc-inline-expansion-format '("%s %s <%s>" givenName name email))
+(setq eudc-inline-query-format '((name)
+                                 (firstname)
+                                 (firstname name)
+                                 (email)
+                                 ))
+
+(setq ldap-host-parameters-alist
+      (quote (("cyclone.coherentlogix.com" base "ou=People,dc=coherentlogix,dc=com"
+               ))))
+
+(eudc-set-server "cyclone.coherentlogix.com" 'ldap t)
+(setq eudc-server-hotlist '(("cyclone.coherentlogix.com" . ldap)))
+(setq eudc-inline-expansion-servers 'hotlist)
+
+(defun enz-eudc-expand-inline()
+  (interactive)
+  (move-end-of-line 1)
+  (insert "*")
+  (unless (condition-case nil
+              (eudc-expand-inline)
+            (error nil))
+    (backward-delete-char-untabify 1))
+  )
+
+;; Adds some hooks
+(eval-after-load "message"
+  '(define-key message-mode-map (kbd "TAB") 'enz-eudc-expand-inline))
+(eval-after-load "sendmail"
+  '(define-key mail-mode-map (kbd "TAB") 'enz-eudc-expand-inline))
+(eval-after-load "post"
+  '(define-key post-mode-map (kbd "TAB") 'enz-eudc-expand-inline))
+
+;; Org mode stuff
+;;(require 'org-install)
+(add-to-list 'auto-mode-alist '("\\.org$" . org-mode))
+(define-key global-map "\C-cl" 'org-store-link)
+(define-key global-map "\C-ca" 'org-agenda)
+(define-key global-map "\C-cz" 'org-iswitchb)
+(setq org-export-with-sub-superscripts nil)
+(setq org-log-done t)
+(setq org-agenda-files (list "~/org/work.org"
+                             "~/org/home.org"))
+
+;; make completion buffers disappear after 5 seconds.
+;(add-hook 'completion-setup-hook
+;  (lambda () (run-at-time 5 nil
+;    (lambda () (delete-windows-on "*Completions*")))))
+(add-to-list 'auto-mode-alist '("\\.hxs$" . asm-mode))
+(add-to-list 'auto-mode-alist '("\\.t$" . asm-mode))
+
+;(add-to-list 'load-path
+;             "/home/chobe/bin/bbdb")
+;(require 'bbdb)
+;(bbdb-initialize)
+
+;(add-to-list 'load-path
+;             "/home/chobe/bin/icicles")
+;(load-library "icicles")
+
+;; run a few shells.
+(shell "*shell 1*")
+(shell "*shell 2*")
+(shell "*shell 3*")
+;(term "/bin/bash")
+
+; C-c 1, C-c 2, C-c 3 to switch to shells
+(global-set-key (kbd "C-c 1")
+  (lambda () (interactive) (switch-to-buffer "*shell 1*")))
+(global-set-key (kbd "C-c 2")
+  (lambda () (interactive) (switch-to-buffer "*shell 2*")))
+(global-set-key (kbd "C-c 3")
+  (lambda () (interactive) (switch-to-buffer "*shell 3*")))
+(global-set-key (kbd "C-c 4")
+  (lambda () (interactive) (switch-to-buffer "*shell 4*")))
+;(global-set-key (kbd "C-c t")
+;  (lambda () (interactive) (switch-to-buffer "*terminal*")))
+
+;;(require 'tree-mode)
+;;(require 'imenu-tree)
+
+;;(eval-after-load "tree-widget"
+;;  '(if (boundp 'tree-widget-themes-load-path)
+;;       (add-to-list 'tree-widget-themes-load-path "~/.emacs.d/")))
+
+;;(autoload 'imenu-tree "imenu-tree" "Imenu tree" t)
+;;(autoload 'tags-tree "tags-tree" "TAGS tree" t)
+
+;; (add-hook 'shell-mode-hook
+;;           '(lambda ()
+;;              (setq frame-title-format
+;;                    '(concat  invocation-name "@" (host-nickname) " %b %+%+ " default-directory))))
+
+(when (fboundp 'winner-mode)
+  (winner-mode 1))
+
+(require 'midnight)
+
+(global-hl-line-mode 1)
+(set-face-background 'hl-line "light yellow")
+
+(server-start)
+
+;; when you mark a region, you can delete it or replace it as in other Windows programs:
+;; simply hit delete or type whatever you want or yank
+(delete-selection-mode)
+
+;; make the slow activity to echo my unfinished commands faster
+(setq echo-keystrokes 0.1)
+
+(setq default-indicate-empty-lines t)
+
+(defadvice kill-ring-save (before slick-copy activate compile)
+  "When called interactively with no active region, copy a single line instead."
+  (interactive
+   (if mark-active (list (region-beginning) (region-end))
+     (message "Copied line")
+     (list (line-beginning-position)
+           (line-beginning-position 2)))))
+
+(dolist (command '(yank yank-pop))
+  (eval `(defadvice ,command (after indent-region activate)
+           (and (not current-prefix-arg)
+                (member major-mode '(emacs-lisp-mode lisp-mode
+                                                     clojure-mode    scheme-mode
+                                                     haskell-mode    ruby-mode
+                                                     rspec-mode      python-mode
+                                                     c-mode          c++-mode
+                                                     objc-mode       latex-mode
+                                                     plain-tex-mode))
+                (let ((mark-even-if-inactive transient-mark-mode))
+                  (indent-region (region-beginning) (region-end) nil))))))
+
+(setq browse-url-browser-function 'browse-url-generic
+      browse-url-generic-program "/usr/bin/firefox")
+
+(defun google-region (beg end)
+  "Google the selected region."
+  (interactive "r")
+  (browse-url (concat "http://www.google.com/search?ie=utf-8&oe=utf-8&q=" (buffer-substring beg end))))
+
+(when (fboundp 'windmove-default-keybindings)
+  (windmove-default-keybindings))
+
+(global-set-key (kbd "S-M-<right>") 'other-frame)
+(global-set-key (kbd "S-M-<left>") 'other-frame)
+
+(autoload 'light-symbol-mode "light-symbol" "Float-over highlighting for symbols." t)
+(setq-default light-symbol-mode t)
+
+;; Close the compilation window if there was no error at all.
+(setq compilation-exit-message-function
+      (lambda (status code msg)
+        ;; If M-x compile exists with a 0
+        (when (and (eq status 'exit) (zerop code))
+          ;; then bury the *compilation* buffer, so that C-x b doesn't go there
+  	  (bury-buffer "*compilation*")
+  	  ;; and return to whatever were looking at before
+  	  (replace-buffer-in-windows "*compilation*"))
+        ;; Always return the anticipated result of compilation-exit-message-function
+  	(cons msg code)))
+
+(require 'ibuffer)
+(global-set-key (kbd "C-x C-b") 'ibuffer-other-window)
+(setq ibuffer-default-sorting-mode 'major-mode)
+
+;; erc stuff
+(setq erc-echo-notices-in-minibuffer-flag t)
+                           
+(setq ibuffer-saved-filter-groups
+      (quote (("default"      
+               ("ERC"   (mode . erc-mode))
+               ("Org"   (mode . org-mode))
+               ))))
+
+(add-hook 'ibuffer-mode-hook
+          (lambda ()
+            (ibuffer-switch-to-saved-filter-groups "default")))
+
+(setq-default display-buffer-reuse-frames t)
+
+(add-to-list 'auto-mode-alist '("\\.ml\\w?" . tuareg-mode))
+(autoload 'tuareg-mode "tuareg" "Major mode for editing Caml code" t)
+(autoload 'camldebug "camldebug" "Run the Caml debugger" t)
